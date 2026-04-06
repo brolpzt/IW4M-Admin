@@ -370,6 +370,24 @@ namespace SharedLibraryCore
                 return z * 2 + 0x0110000100000000 + y;
             }
 
+            // Pure hex identifiers longer than 16 characters (e.g. CoD hwid2 up to 32 hex digits) cannot be
+            // represented in a single long via TryParse; hash the full token for a stable NetworkId.
+            if ((numberStyle & NumberStyles.AllowHexSpecifier) != 0)
+            {
+                var hexToken = str.Trim();
+                if (hexToken.Length > 16 &&
+                    Regex.IsMatch(hexToken, @"\A[A-Fa-f0-9]+\z", RegexOptions.IgnoreCase))
+                {
+                    var hashed = hexToken.GenerateGuidFromString();
+                    if (hashed == 0)
+                    {
+                        throw new FormatException($"Could not parse client GUID - {str}");
+                    }
+
+                    return hashed;
+                }
+            }
+
             str = str.Substring(0, Math.Min(str.Length, str.StartsWith("-") ? 20 : 19));
             var parsableAsNumber = Regex.Match(str, @"([A-F]|[a-f]|[0-9])+").Value;
 

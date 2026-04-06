@@ -75,5 +75,11 @@ namespace SharedLibraryCore.Interfaces
         /// maps the team code name to a type type eg "CT" -> Allies
         /// </summary>
         Dictionary<string, EFClient.TeamType> TeamMapping { get; }
+
+        /// <summary>
+        /// First field of semicolon log lines (before ';') mapped to GameEvent.EventType integer values.
+        /// Required for mods that use e.g. Connected/Kill instead of J/K because those lines skip regex fallback.
+        /// </summary>
+        Dictionary<string, int> CustomSemicolonLineEventTypes { get; }
     }
 }

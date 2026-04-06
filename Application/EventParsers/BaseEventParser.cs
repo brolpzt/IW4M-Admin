@@ -313,7 +313,7 @@ namespace IW4MAdmin.Application.EventParsers
                 ?.TrimNewLine();
             var originClientNumber =
                 Convert.ToInt32(
-                    match.Values[Configuration.Join.GroupMapping[ParserRegex.GroupType.OriginClientNumber]]);
+                    match.Values[Configuration.Quit.GroupMapping[ParserRegex.GroupType.OriginClientNumber]]);
 
             var networkId = originIdString.IsBotGuid()
                 ? originName.GenerateGuidFromString()
@@ -690,9 +690,18 @@ namespace IW4MAdmin.Application.EventParsers
             if (lineSplit.Length > 1)
             {
                 var type = lineSplit[0];
-                return _eventTypeMap.ContainsKey(type)
-                    ? (_eventTypeMap[type], type)
-                    : (GameEvent.EventType.Unknown, lineSplit[0]);
+                if (_eventTypeMap.ContainsKey(type))
+                {
+                    return (_eventTypeMap[type], type);
+                }
+
+                if (Configuration.CustomSemicolonLineEventTypes.Count > 0 &&
+                    Configuration.CustomSemicolonLineEventTypes.TryGetValue(type, out var customTypeInt))
+                {
+                    return ((GameEvent.EventType)customTypeInt, type);
+                }
+
+                return (GameEvent.EventType.Unknown, lineSplit[0]);
             }
 
             foreach (var (key, value) in _regexMap)

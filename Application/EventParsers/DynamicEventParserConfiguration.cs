@@ -28,6 +28,8 @@ namespace IW4MAdmin.Application.EventParsers
 
         public Dictionary<string, EFClient.TeamType> TeamMapping { get; set; } = new();
 
+        public Dictionary<string, int> CustomSemicolonLineEventTypes { get; set; } = new();
+
         public DynamicEventParserConfiguration(IParserRegexFactory parserRegexFactory)
         {
             Say = parserRegexFactory.CreateParserRegex();
