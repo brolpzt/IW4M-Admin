@@ -13,6 +13,11 @@ namespace SharedLibraryCore.Interfaces
         CommandPrefix CommandPrefixes { get; set; }
 
         /// <summary>
+        ///     RCon console command used to list players (default <c>status</c>; e.g. libcod <c>status2</c>)
+        /// </summary>
+        string RConStatusCommand { get; set; }
+
+        /// <summary>
         ///     stores the regex info for parsing get status response
         /// </summary>
         ParserRegex Status { get; set; }

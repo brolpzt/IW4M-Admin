@@ -14,6 +14,7 @@ namespace IW4MAdmin.Application.RConParsers
     public class DynamicRConParserConfiguration : IRConParserConfiguration
     {
         public CommandPrefix CommandPrefixes { get; set; }
+        public string RConStatusCommand { get; set; } = "status";
         public ParserRegex Status { get; set; }
         public ParserRegex MapStatus { get; set; }
         public ParserRegex GametypeStatus { get; set; }

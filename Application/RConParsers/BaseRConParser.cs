@@ -169,7 +169,9 @@ namespace IW4MAdmin.Application.RConParsers
 
         public virtual async Task<IStatusResponse> GetStatusAsync(IRConConnection connection, CancellationToken token = default)
         {
-            var response = await connection.SendQueryAsync(StaticHelpers.QueryType.COMMAND_STATUS, "status", token);
+            var response = await connection.SendQueryAsync(StaticHelpers.QueryType.COMMAND_STATUS,
+                string.IsNullOrWhiteSpace(Configuration.RConStatusCommand) ? "status" : Configuration.RConStatusCommand,
+                token);
             
             _logger.LogDebug("Status Response {Response}", string.Join(Environment.NewLine, response));
             

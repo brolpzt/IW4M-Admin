@@ -182,7 +182,8 @@ namespace Integrations.Cod
                         break;
                     case StaticHelpers.QueryType.COMMAND_STATUS:
                         waitForResponse = true;
-                        payload = BuildPayload(_config.CommandPrefixes.RConCommand, convertedRConPassword, "status");
+                        var statusCommand = string.IsNullOrWhiteSpace(parameters) ? "status" : parameters;
+                        payload = BuildPayload(_config.CommandPrefixes.RConCommand, convertedRConPassword, statusCommand);
                         break;
                 }
             }
