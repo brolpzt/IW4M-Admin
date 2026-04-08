@@ -70,7 +70,13 @@ namespace SharedLibraryCore.Interfaces
         ///     indicates the format expected for parsed guids
         /// </summary>
         NumberStyles GuidNumberStyle { get; set; }
-        
+
+        /// <summary>
+        /// When true, lines starting with say; or sayteam; (stock log) are ignored for chat/commands;
+        /// only formats handled earlier (e.g. Chat;say;...) produce message events. For libcod-style logs.
+        /// </summary>
+        bool IgnoreClassicSayLogLines { get; set; }
+
         /// <summary>
         /// maps the team code name to a type type eg "CT" -> Allies
         /// </summary>

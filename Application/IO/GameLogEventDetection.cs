@@ -99,15 +99,31 @@ namespace IW4MAdmin.Application.IO
                         if ((gameEvent.RequiredEntity & GameEvent.EventRequiredEntity.Origin) ==
                             GameEvent.EventRequiredEntity.Origin && gameEvent.Origin.NetworkId != Utilities.WORLD_ID)
                         {
-                            gameEvent.Origin = _server.GetClientsAsList()
-                                .First(_client => _client.NetworkId == gameEvent.Origin?.NetworkId);
+                            var clients = _server.GetClientsAsList();
+                            var stub = gameEvent.Origin;
+                            var resolved = clients.FirstOrDefault(c => c.NetworkId == stub.NetworkId)
+                                           ?? clients.FirstOrDefault(c => c.ClientNumber == stub.ClientNumber);
+                            if (resolved == null)
+                            {
+                                throw new InvalidOperationException();
+                            }
+
+                            gameEvent.Origin = resolved;
                         }
 
                         if ((gameEvent.RequiredEntity & GameEvent.EventRequiredEntity.Target) ==
                             GameEvent.EventRequiredEntity.Target)
                         {
-                            gameEvent.Target = _server.GetClientsAsList()
-                                .First(_client => _client.NetworkId == gameEvent.Target?.NetworkId);
+                            var clients = _server.GetClientsAsList();
+                            var stub = gameEvent.Target;
+                            var resolved = clients.FirstOrDefault(c => c.NetworkId == stub.NetworkId)
+                                           ?? clients.FirstOrDefault(c => c.ClientNumber == stub.ClientNumber);
+                            if (resolved == null)
+                            {
+                                throw new InvalidOperationException();
+                            }
+
+                            gameEvent.Target = resolved;
                         }
 
                         if (gameEvent.Origin != null)

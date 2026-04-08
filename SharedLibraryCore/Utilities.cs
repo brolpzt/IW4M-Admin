@@ -386,6 +386,17 @@ namespace SharedLibraryCore
 
                     return hashed;
                 }
+
+                // Short all-decimal tokens (Steam/xuid-style) must not be parsed as hex — e.g. "1653791388" is
+                // decimal, not 0x1653791388.
+                if (hexToken.Length is >= 1 and <= 15 && Regex.IsMatch(hexToken, @"^[0-9]+$"))
+                {
+                    if (long.TryParse(hexToken, NumberStyles.Integer, CultureInfo.InvariantCulture, out var decId) &&
+                        decId != 0)
+                    {
+                        return convertSigned && decId < 0 ? (long)(uint)decId : decId;
+                    }
+                }
             }
 
             str = str.Substring(0, Math.Min(str.Length, str.StartsWith("-") ? 20 : 19));

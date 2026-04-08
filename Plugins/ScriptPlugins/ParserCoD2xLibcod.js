@@ -9,12 +9,15 @@ var eventParser;
  *
  * GameEvent.EventType ordinals: PreConnect=9, PreDisconnect=10, Damage=302, Kill=303
  *
- * Guid / NetworkId = hwid2 from status2 (up to 32 hex chars). Log lines (Connected; Kill; Damage; …)
- * should use the same hwid2 token as the first id field. GuidNumberStyle 515 = NumberStyles.HexNumber.
+ * Chat / comandos: apenas linhas libcod no formato:
+ *   Chat;say;networkId;slot;team;name;message
+ *   Chat;sayteam;... (mesmo layout)
+ * Linhas stock say;sayteam; no games_mp.log sao ignoradas (IgnoreClassicSayLogLines).
+ * O id deve ser o mesmo que em Connected / status2. Prefixo \\x15 (LocalizeText) e removido no parser.
  */
 var plugin = {
     author: 'brolpzt (zk_libcod status2)',
-    version: 0.2,
+    version: 0.6,
     name: 'CoD2x (libcod status2) Parser',
     isParser: true,
 
@@ -31,7 +34,6 @@ var plugin = {
         // hwid2: zk_libcod prints cl_hwid2 or "0" — allow up to 64 chars (no comma); long hex uses full string hash in ConvertGuidToLong
         rconParser.Configuration.Status.Pattern =
             '^([0-9]+),(-?[0-9]+),(CNCT|ZMBI|[0-9]{1,4}),([^,]{1,64}),(.*?)\\^7,([0-9]+),([^,]+),(-?[0-9]+),([0-9]+)$';
-        rconParser.Configuration.GuidNumberStyle = 515;
         rconParser.Configuration.Status.AddMapping(100, 1);
         rconParser.Configuration.Status.AddMapping(101, 2);
         rconParser.Configuration.Status.AddMapping(102, 3);
@@ -41,9 +43,17 @@ var plugin = {
 
         rconParser.Configuration.CommandPrefixes.RConResponse = '\xff\xff\xff\xffprint\n';
 
-        rconParser.Configuration.Dvar.Pattern = '^"(.+)" is: "(.+)?" default: "(.+)?" info: "(.+)?"$';
-        rconParser.Configuration.Dvar.AddMapping(109, 2);
-        rconParser.Configuration.Dvar.AddMapping(110, 4);
+        // CoD2 / libcod: dvar print is usually "name" is: "value" [default: ...] without CoD4x "info:" line
+        rconParser.Configuration.Dvar.Pattern =
+            '^"(.+)" is: "(.*)"(?: default: "(.*)")?(?:\\s+latched:\\s*"(.*)")?(?:\\s+info:\\s*"(.*)")?\\s*$';
+        rconParser.Configuration.Dvar.AddMapping(106, 1);
+        rconParser.Configuration.Dvar.AddMapping(107, 2);
+        rconParser.Configuration.Dvar.AddMapping(108, 3);
+        rconParser.Configuration.Dvar.AddMapping(109, 4);
+        rconParser.Configuration.Dvar.AddMapping(110, 5);
+
+        rconParser.Configuration.DefaultDvarValues.Add('version', 'CoD2x + zk_libcod status2');
+        rconParser.Configuration.DefaultDvarValues.Add('sv_running', '1');
 
         rconParser.Configuration.NoticeLineSeparator = '. ';
         rconParser.Configuration.DefaultRConPort = 28960;
@@ -52,7 +62,7 @@ var plugin = {
         rconParser.CanGenerateLogPath = true;
 
         eventParser.Configuration.GameDirectory = 'main';
-        eventParser.Configuration.GuidNumberStyle = 515;
+        eventParser.Configuration.IgnoreClassicSayLogLines = true;
         eventParser.Version = 'CoD2x + zk_libcod status2';
         eventParser.GameName = -1;
 
@@ -63,6 +73,8 @@ var plugin = {
         lineTypes.Add('Disconnected', 10);
         lineTypes.Add('Damage', 302);
         lineTypes.Add('Kill', 303);
+        lineTypes.Add('Chat', 100);
+        lineTypes.Add('ChatTeam', 99);
 
         eventParser.Configuration.Join.Pattern = '^(Connected);([^;]+);([0-9]+);(.*)$';
         eventParser.Configuration.Join.AddMapping(0, 1);

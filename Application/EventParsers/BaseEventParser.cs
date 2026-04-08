@@ -5,6 +5,7 @@ using SharedLibraryCore.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Data.Models;
 using IW4MAdmin.Plugins.Stats.Events;
 using Microsoft.Extensions.Logging;
@@ -610,6 +611,27 @@ namespace IW4MAdmin.Application.EventParsers
 
         private GameEvent ParseMessageEvent(string logLine, long gameTime, GameEvent.EventType eventType)
         {
+            // libcod / CoD2: Chat;say;networkId;slot;team;name;message (same ids as Connected / status2)
+            var chatSay = Regex.Match(logLine,
+                @"^Chat;(?<kind>say|sayteam);(?<id>[^;]+);(?<slot>[0-9]+);(?<team>[^;]*);(?<name>[^;]*);(?<msg>.*)$",
+                RegexOptions.IgnoreCase);
+            if (chatSay.Success)
+            {
+                var kind = chatSay.Groups["kind"].Value;
+                var effectiveType = kind.Equals("sayteam", StringComparison.OrdinalIgnoreCase)
+                    ? GameEvent.EventType.SayTeam
+                    : GameEvent.EventType.Say;
+                return BuildSayOrCommandFromParts(logLine, gameTime, effectiveType, chatSay.Groups["id"].Value,
+                    Parse(chatSay.Groups["slot"].Value), chatSay.Groups["name"].Value?.TrimNewLine(),
+                    chatSay.Groups["msg"].Value);
+            }
+
+            if (Configuration.IgnoreClassicSayLogLines &&
+                Regex.IsMatch(logLine, @"^(?i)(say|sayteam);", RegexOptions.None))
+            {
+                return null;
+            }
+
             var matchResult = Configuration.Say.PatternMatcher.Match(logLine);
 
             if (!matchResult.Success)
@@ -619,6 +641,12 @@ namespace IW4MAdmin.Application.EventParsers
 
             var message = new string(matchResult.Values[Configuration.Say.GroupMapping[ParserRegex.GroupType.Message]]
                 .Where(c => !char.IsControl(c)).ToArray());
+
+            if (!string.IsNullOrEmpty(Configuration.LocalizeText) &&
+                message.StartsWith(Configuration.LocalizeText, StringComparison.Ordinal))
+            {
+                message = message[Configuration.LocalizeText.Length..];
+            }
 
             if (message.StartsWith("/"))
             {
@@ -665,7 +693,7 @@ namespace IW4MAdmin.Application.EventParsers
 
             return new ClientMessageEvent
             {
-                Type = GameEvent.EventType.Say,
+                Type = eventType,
                 Data = message,
                 Origin = new EFClient { NetworkId = originId, ClientNumber = clientNumber },
                 Message = message,
@@ -679,6 +707,66 @@ namespace IW4MAdmin.Application.EventParsers
                 ClientNetworkId = originIdString,
                 ClientSlotNumber = clientNumber,
                 IsTeamMessage = eventType == GameEvent.EventType.SayTeam
+            };
+        }
+
+        private GameEvent BuildSayOrCommandFromParts(string logLine, long gameTime, GameEvent.EventType messageEventType,
+            string originIdString, int clientNumber, string originName, string messageRaw)
+        {
+            var message = new string(messageRaw.Where(c => !char.IsControl(c)).ToArray());
+            if (!string.IsNullOrEmpty(Configuration.LocalizeText) &&
+                message.StartsWith(Configuration.LocalizeText, StringComparison.Ordinal))
+            {
+                message = message[Configuration.LocalizeText.Length..];
+            }
+
+            if (message.StartsWith("/"))
+            {
+                message = message[1..];
+            }
+
+            if (string.IsNullOrEmpty(message))
+            {
+                return null;
+            }
+
+            var originId = originIdString.IsBotGuid()
+                ? originName.GenerateGuidFromString()
+                : originIdString.ConvertGuidToLong(Configuration.GuidNumberStyle);
+
+            if (message.StartsWith(_appConfig.CommandPrefix) || message.StartsWith(_appConfig.BroadcastCommandPrefix))
+            {
+                return new ClientCommandEvent
+                {
+                    Type = GameEvent.EventType.Command,
+                    Data = message,
+                    Origin = new EFClient { NetworkId = originId, ClientNumber = clientNumber },
+                    Message = message,
+                    Extra = logLine,
+                    RequiredEntity = GameEvent.EventRequiredEntity.Origin,
+                    GameTime = gameTime,
+                    Source = GameEvent.EventSource.Log,
+                    ClientName = originName,
+                    ClientNetworkId = originIdString,
+                    ClientSlotNumber = clientNumber,
+                    IsTeamMessage = messageEventType == GameEvent.EventType.SayTeam
+                };
+            }
+
+            return new ClientMessageEvent
+            {
+                Type = messageEventType,
+                Data = message,
+                Origin = new EFClient { NetworkId = originId, ClientNumber = clientNumber },
+                Message = message,
+                Extra = logLine,
+                RequiredEntity = GameEvent.EventRequiredEntity.Origin,
+                GameTime = gameTime,
+                Source = GameEvent.EventSource.Log,
+                ClientName = originName,
+                ClientNetworkId = originIdString,
+                ClientSlotNumber = clientNumber,
+                IsTeamMessage = messageEventType == GameEvent.EventType.SayTeam
             };
         }
 
